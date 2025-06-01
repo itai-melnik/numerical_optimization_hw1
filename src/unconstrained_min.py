@@ -84,7 +84,7 @@ class unconstrainedMinimizer:
             self._save_history(k, f_val, g)
             
             #print to console:
-            print('iteration number:',k )
+            print('iteration number:',k + 1 )
             print('current location 𝑥𝑖:',self.x)
             print('current objective value 𝑓(𝑥𝑖 ):',f_val )
             
@@ -117,6 +117,8 @@ class unconstrainedMinimizer:
               
         
         #returns final location, final value and bool flag
+        
+
         return self.x, self.history[-1].f, bool_flag
             
             

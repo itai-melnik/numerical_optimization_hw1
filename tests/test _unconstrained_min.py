@@ -14,7 +14,7 @@ from src.utils import plot_contours, plot_convergence
 
 class TestUnconstrainedMin(unittest.TestCase):
     
-    
+    list_final_output = []
     #recommended starting points
     x0 = np.array([1,1])
     x0_r = np.array([-1,2])
@@ -28,219 +28,99 @@ class TestUnconstrainedMin(unittest.TestCase):
     #recommended constants
     rho = 0.01 
     c0 = 0.5
-    
-    
-   
-    def test_Qi(self):
-        
-        gd = unconstrainedMinimizer(
-            quad_i,
-            x0=self.x0,
-            user_choice="gradient",               # gradient descent
-        )
-        
-        newton = unconstrainedMinimizer(
-            quad_i,
-            x0=self.x0,
-            user_choice="newton",               
-        )
-        
-        gd_x_star, gd_f_star, gd_success = gd.minimize()
-        gd_hist = gd.get_history()
-        
-        newton_x_star, newton_f_star, newton_success = newton.minimize()
-        newton_hist = newton.get_history()
-        
-        
-        
-        
-        
-        plot_contours(
-            lambda x: quad_i(x)[0],
-            xlim=(-0.5, 1.1),
-            ylim=(-0.5, 1.1),
-            paths=[gd_hist, newton_hist],                         # pass HistoryEntry list directly
-            labels=["GD", "NEWTON"],
-            title=r"Qi GD vs Newton path",
-        )
-        
-        
-    
-    def test_Qii(self):
-        
-        gd = unconstrainedMinimizer(
-            quad_ii,
-            x0=self.x0,
-            user_choice="gradient",               # gradient descent
-        )
-        
-        newton = unconstrainedMinimizer(
-            quad_ii,
-            x0=self.x0,
-            user_choice="newton",               
-        )
-        
-        gd_x_star, gd_f_star, gd_success = gd.minimize()
-        gd_hist = gd.get_history()
-        
-        newton_x_star, newton_f_star, newton_success = newton.minimize()
-        newton_hist = newton.get_history()
-        
-        
-    
-        plot_contours(
-            lambda x: quad_ii(x)[0],
-            xlim=(-0.5, 1.1),
-            ylim=(-0.5, 1.1),
-            paths=[gd_hist, newton_hist],                         # pass HistoryEntry list directly
-            labels=["GD", "NEWTON"],
-            title=r"Qii GD vs Newton path",
-        )
-        
-        
-        
-        
-    def test_Qiii(self):
-        
-        gd = unconstrainedMinimizer(
-            quad_iii,
-            x0=self.x0,
-            user_choice="gradient",               # gradient descent
-        )
-        
-        newton = unconstrainedMinimizer(
-            quad_iii,
-            x0=self.x0,
-            user_choice="newton",               
-        )
-        
-        gd_x_star, gd_f_star, gd_success = gd.minimize()
-        gd_hist = gd.get_history()
-        
-        newton_x_star, newton_f_star, newton_success = newton.minimize()
-        newton_hist = newton.get_history()
-        
-        
-    
-        plot_contours(
-            lambda x: quad_iii(x)[0],
-            xlim=(-2, 1.5),
-            ylim=(-2, 1.5),
-            paths=[gd_hist, newton_hist],                         # pass HistoryEntry list directly
-            labels=["GD", "NEWTON"],
-            title=r"Qiii GD vs Newton path",
-        )
-        
-        
-        
-        
-    def test_rosenbrock(self):
-        
-        gd = unconstrainedMinimizer(
-            rosenbrock,
-            x0=self.x0_r,
-            user_choice="gradient",
-            max_iter=self.max_iter_r               
-        )
-        
-        newton = unconstrainedMinimizer(
-            rosenbrock,
-            x0=self.x0_r,
-            user_choice="newton",
-            max_iter=self.max_iter_r              
-        )
-        
-        gd_x_star, gd_f_star, gd_success = gd.minimize()
-        gd_hist = gd.get_history()
-        
-        newton_x_star, newton_f_star, newton_success = newton.minimize()
-        newton_hist = newton.get_history()
-        
-    
-        plot_contours(
-            lambda x: rosenbrock(x)[0],
-            xlim=(-2,0),
-            ylim=(0,3),
-            paths=[gd_hist, newton_hist],                         # pass HistoryEntry list directly
-            labels=["GD", "NEWTON"],
-            title=r"Rosenbrock GD vs Newton path",
-        )
-        
-        
-        
-        
-        
-        
-    def test_linear(self):
-        
-        gd = unconstrainedMinimizer(
-            linear_func,
-            x0=self.x0,
-            user_choice="gradient",              
-        )
-        
-        newton = unconstrainedMinimizer(
-            linear_func,
-            x0=self.x0,
-            user_choice="newton",             
-        )
-        
-        gd_x_star, gd_f_star, gd_success = gd.minimize()
-        gd_hist = gd.get_history()
-        
-        newton_x_star, newton_f_star, newton_success = newton.minimize()
-        newton_hist = newton.get_history()
-        
-    
-        plot_contours(
-            lambda x: linear_func(x=x, a=np.array([1,2]))[0],
-            xlim=(-100,100),
-            ylim=(-100,100),
-            paths=[gd_hist, newton_hist],                         # pass HistoryEntry list directly
-            labels=["GD", "NEWTON"],
-            title=r"linear function GD vs Newton path",
-        )
-        
-        
-        
-        
-        
-    def test_triangle(self):
-        
-        gd = unconstrainedMinimizer(
-            linear_func,
-            x0=self.x0,
-            user_choice="gradient",              
-        )
-        
-        newton = unconstrainedMinimizer(
-            linear_func,
-            x0=self.x0,
-            user_choice="newton",            
-        )
-        
-        gd_x_star, gd_f_star, gd_success = gd.minimize()
-        gd_hist = gd.get_history()
-        
-        newton_x_star, newton_f_star, newton_success = newton.minimize()
-        newton_hist = newton.get_history()
-    
-        plot_contours(
-            lambda x: linear_func(x=x)[0],
-            xlim=(-100,100),
-            ylim=(-100,100),
-            paths=[gd_hist, newton_hist],                         # pass HistoryEntry list directly
-            labels=["GD", "NEWTON"],
-            title=r"Corner Triangle GD vs Newton path",
-        )
-        
-        print(gd_success)
-        
-        plt.show()
-        
-        
-        
 
+    # ------------------------------------------------------------------
+    # Helper func
+    # ------------------------------------------------------------------
+    def _run_case(
+        self,
+        func,
+        *,
+        x0: np.ndarray,
+        xlim: tuple[float, float],
+        ylim: tuple[float, float],
+        title: str,
+        contour_func=None,
+        max_iter: int | None = None,
+    ) -> None:
+        """Run GD & Newton on *func*, then plot contours & convergence."""
+        # build optimisers
+        gd = unconstrainedMinimizer(
+            func, x0=x0, user_choice="gradient", max_iter=max_iter or self.max_iter
+        )
+        newton = unconstrainedMinimizer(
+            func, x0=x0, user_choice="newton", max_iter=max_iter or self.max_iter
+        )
+
+        # optimise
+        gd.minimize();  newton.minimize()
+        gd_hist = gd.get_history();  newton_hist = newton.get_history()
+
+        # choose which callable produces scalar value for contours
+        cfunc = contour_func if contour_func is not None else (lambda v: func(v)[0])
+
+        plot_contours(
+            cfunc,
+            xlim=xlim, ylim=ylim,
+            paths=[gd_hist, newton_hist],
+            labels=["GD", "NEWTON"],
+            title=title,
+        )
+        plot_convergence([gd_hist, newton_hist], labels=["GD", "NEWTON"])
+    
+    def test_Qi(self):
+        self._run_case(
+            quad_i,
+            x0=self.x0,
+            xlim=(-0.5, 1.1), ylim=(-0.5, 1.1),
+            title="Qi GD vs Newton path",
+        )
+
+    def test_Qii(self):
+        self._run_case(
+            quad_ii,
+            x0=self.x0,
+            xlim=(-0.5, 1.1), ylim=(-0.5, 1.1),
+            title="Qii GD vs Newton path",
+        )
+
+    def test_Qiii(self):
+        self._run_case(
+            quad_iii,
+            x0=self.x0,
+            xlim=(-2, 1.5), ylim=(-2, 1.5),
+            title="Qiii GD vs Newton path",
+        )
+
+    def test_rosenbrock(self):
+        self._run_case(
+            rosenbrock,
+            x0=self.x0_r,
+            xlim=(-2, 0), ylim=(0, 3),
+            title="Rosenbrock GD vs Newton path",
+            max_iter=self.max_iter_r,
+        )
+
+    def test_linear(self):
+        self._run_case(
+            linear_func,
+            x0=self.x0,
+            xlim=(-100, 100), ylim=(-100, 100),
+            title="Linear function GD vs Newton path",
+            contour_func=lambda x: linear_func(x=x, a=np.array([1, 2]))[0],
+        )
+
+    def test_triangle(self):
+        self._run_case(
+            triangle_func,
+            x0=self.x0,
+            xlim=(-1, 1.5), ylim=(-0.5, 1.5),
+            title="Corner Triangle GD vs Newton path",
+            contour_func=lambda x: triangle_func(x)[0],
+        )
+    
+        plt.show()
            
+
 if __name__ == '__main__':
     unittest.main() 
