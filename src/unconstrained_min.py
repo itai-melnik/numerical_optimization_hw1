@@ -72,10 +72,12 @@ class unconstrainedMinimizer:
     def minimize(self) -> Tuple[np.ndarray, float]:
         
         bool_flag = False
-        
+       
+        need_hessian = True if self.user_choice == 'newton' else False
+            
         for k in range(self.max_iter):
             
-            f_val, g, h = self.f(self.x)
+            f_val, g, h = self.f(self.x, need_hessian)
             
             
             #save current iteration
@@ -128,7 +130,7 @@ class unconstrainedMinimizer:
             return False
         
         param_change = np.linalg.norm(self.x - self.prev_x)
-        obj_change = np.abs(self.history[-1].f)
+        obj_change = np.abs(self.history[-1].f - self.history[-2].f)
         
         
         if(param_change < self.param_tol or obj_change < self.obj_tol):
@@ -149,22 +151,26 @@ class unconstrainedMinimizer:
         
         #for newton method
         elif (self.user_choice=='newton'):
-            return np.linalg.solve(h, -g)  #solves ax = b (gets x) h*p = -g since p = -g/h so we get p. AVOID computing inverse
-            
-            
-            
+            try:
+                return -np.linalg.solve(h, g) #solves ax = b (gets x) h*p = -g since p = -g/h so we get p. AVOID computing inverse
+            except np.linalg.LinAlgError:
+                return -g
         
+        
+              
+            
+         
     
     def backtracking(self, x, f_val, g, p) -> float:
         """ used to compute alpha (the step size)"""
         
         alpha = 1.0 #initial value
-        while( self.f(x + alpha * p) > (f_val + self.c1 * np.dot(f_val, g) * alpha)):
+        
+        while self.f(x + alpha*p)[0] > f_val + self.c1*alpha*g.dot(p):
+            alpha *= self.rho
             
-            # alpha = rho * alpha
-            alpha *= self.rho 
-            
-            #TODO add stopping condition 
+            if alpha < 1e-12:
+                break
             
             
         return alpha

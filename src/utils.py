@@ -1,11 +1,11 @@
 """
-Utility helpers for visualising 2-D optimisation problems and their progress.
+Utility helpers for visualising 2‑D optimisation problems and their progress.
 
 Functions
 ---------
 plot_contours(func, xlim, ylim, *, levels=50, n_points=400,
               paths=None, labels=None, ax=None, title=None)
-    Draws contour lines of a 2-D objective function and (optionally) the
+    Draws contour lines of a 2‑D objective function and (optionally) the
     optimisation paths produced by one or more algorithms.
 
 plot_convergence(histories, *, labels=None, ax=None,
@@ -15,11 +15,57 @@ plot_convergence(histories, *, labels=None, ax=None,
 """
 from __future__ import annotations
 
-from typing import Callable, Iterable, Sequence, Optional, Tuple, List
+from typing import Callable, Sequence, Tuple, Optional, List
 import numpy as np
 import matplotlib.pyplot as plt
 
-Func2D = Callable[[np.ndarray], float]      # accepts shape-(2,) array, returns scalar
+# -----------------------------------------------------------------------------#
+#   Convenience converters for various input formats
+# -----------------------------------------------------------------------------#
+def _to_path_array(path_like) -> np.ndarray:
+    """
+    Convert *path_like* into a 2‑column NumPy array of points.
+
+    Accepts:
+    1. A NumPy array already shaped (k, 2) or (2,)     ↦ returned unchanged
+    2. An iterable of objects carrying an attribute ``x`` that is array‑like
+       length‑2 (e.g. HistoryEntry instances)          ↦ their .x values stacked
+    3. An iterable of array‑likes of length‑2           ↦ stacked directly
+    """
+    if isinstance(path_like, np.ndarray):
+        arr = np.atleast_2d(path_like)
+        if arr.shape[1] != 2:
+            raise ValueError("Path array must have shape (k, 2)")
+        return arr.astype(float)
+
+    # Fall‑back: treat as iterable
+    coords = []
+    for p in path_like:
+        # HistoryEntry or similar with '.x'
+        if hasattr(p, "x"):
+            coords.append(np.asarray(p.x, dtype=float))
+        else:
+            coords.append(np.asarray(p, dtype=float))
+    arr = np.vstack(coords)
+    if arr.shape[1] != 2:
+        raise ValueError("Each point must be length‑2")
+    return arr
+
+
+# -----------------------------------------------------------------------------#
+#   Type aliases
+# -----------------------------------------------------------------------------#
+Func2D = Callable[[np.ndarray], float]      # accepts shape‑(2,) array, returns scalar
+
+
+# -----------------------------------------------------------------------------#
+#   Internal helpers
+# -----------------------------------------------------------------------------#
+def _evaluate_on_grid(func: Func2D, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
+    """Vectorised helper to evaluate *func* over a mesh grid."""
+    pts = np.stack([X.ravel(), Y.ravel()], axis=1)
+    Z = np.array([func(p) for p in pts], dtype=float)
+    return Z.reshape(X.shape)
 
 
 # -----------------------------------------------------------------------------#
@@ -32,118 +78,127 @@ def plot_contours(
     *,
     levels: int | Sequence[float] = 50,
     n_points: int = 400,
-    paths: Optional[Iterable[np.ndarray]] = None,
+    paths: Optional[Sequence[Sequence[np.ndarray]]] = None,
     labels: Optional[Sequence[str]] = None,
     ax: Optional[plt.Axes] = None,
     title: Optional[str] = None,
-) -> plt.Axes:
+):
     """
+    Draw contour lines of *func* and (optionally) overlay optimisation paths.
+
     Parameters
     ----------
     func
-        Callable that maps a 2-D point (numpy array of length 2) to a scalar.
+        A callable ``f(x) -> float`` where ``x`` is a length‑2 NumPy array.
     xlim, ylim
-        (min, max) pairs that delimit the rectangle to show.
+        Tuples giving (min, max) for the two axes.
     levels
-        Passed straight to `plt.contour`.  Either an int (#levels) or explicit
-        contour values.
+        Either an integer specifying the number of contour levels or a
+        sequence of level values.
     n_points
-        Grid resolution per axis.
+        Number of points per axis used to build the evaluation grid.
     paths
-        Iterable of 2-D arrays of shape (k_i, 2).  Each row is the x-coordinate
-        visited by an algorithm.
+        A sequence whose elements are themselves sequences of ``np.ndarray``
+        points (the iterates produced by an algorithm).
     labels
-        Legend labels matching `paths`.  Ignored if `paths is None`.
+        Labels that will appear in the legend for each path.
     ax
-        Existing axes to draw on; if omitted a new figure/axes is created.
+        Existing matplotlib Axes to draw on. If *None*, a new figure is made.
     title
-        Title for the figure.  If omitted it is derived from `func.__name__`.
+        Title for the plot.
     """
-    if ax is None:  # fresh figure
-        fig, ax = plt.subplots(figsize=(6, 5), constrained_layout=True)
+    if ax is None:
+        _, ax = plt.subplots(figsize=(6, 5))
 
-    # mesh grid
+    # Build evaluation grid
     xs = np.linspace(*xlim, n_points)
     ys = np.linspace(*ylim, n_points)
     X, Y = np.meshgrid(xs, ys)
-    Z = np.empty_like(X)
+    Z = _evaluate_on_grid(func, X, Y)
 
-    # evaluate func on grid (vectorised loop to spare memory)
-    for i in range(n_points):
-        for j in range(n_points):
-            Z[i, j] = func(np.array([X[i, j], Y[i, j]]))
+    # Draw contours
+    contour_set = ax.contour(X, Y, Z, levels=levels, cmap="viridis")
+    ax.clabel(contour_set, inline=1, fontsize=8, fmt="%.2g")
 
-    # draw contours
-    cs = ax.contour(X, Y, Z, levels=levels, linewidths=0.8, cmap="viridis")
-    ax.clabel(cs, inline=True, fontsize=8)
-
-    # optional algorithm paths
+    # Overlay optimisation paths if given
     if paths is not None:
         if labels is None:
-            labels = [f"Path {i}" for i in range(len(paths))]
-        for path, label in zip(paths, labels):
-            ax.plot(path[:, 0], path[:, 1], marker="o", markersize=3, lw=1.5,
-                    label=label)
+            labels = [None] * len(paths)
 
-    ax.set_xlim(xlim)
-    ax.set_ylim(ylim)
+        markers = ["o", "s", "^", "d", "x", "v", "*", "P"]
+        linestyles = ["-", "--", "-.", ":"]
+        for i, path in enumerate(paths):
+            pts = _to_path_array(path)
+            ax.plot(
+                pts[:, 0],
+                pts[:, 1],
+                linestyle=linestyles[i % len(linestyles)],
+                marker=markers[i % len(markers)],
+                label=labels[i] if i < len(labels) else None,
+            )
+
+    # Beautify
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    ax.set_aspect("equal", adjustable="box")
     ax.set_xlabel(r"$x_1$")
     ax.set_ylabel(r"$x_2$")
-    ax.set_aspect("equal", adjustable="box")
-
-    if title is None:
-        title = f"Contours of {func.__name__}"
-    ax.set_title(title)
-
-    if paths is not None:
-        ax.legend(loc="best")
+    if title is not None:
+        ax.set_title(title)
+    if labels is not None and any(lbl is not None for lbl in labels):
+        ax.legend()
 
     return ax
 
 
 # -----------------------------------------------------------------------------#
-#   Convergence plot
+#   Convergence curves
 # -----------------------------------------------------------------------------#
 def plot_convergence(
-    histories: Sequence[Sequence[float]],
+    histories: Sequence[Sequence["HistoryEntry"]],
     *,
     labels: Optional[Sequence[str]] = None,
     ax: Optional[plt.Axes] = None,
     ylog: bool = True,
     title: str = "Objective value vs. iteration",
-) -> plt.Axes:
+):
     """
+    Plot objective value against iteration for several optimisation runs.
+
     Parameters
     ----------
     histories
-        Each element is a list/array of objective values f(x_k) in order of
-        iteration for one optimisation run.
+        Sequence where each element is the ``history`` list returned by an
+        ``unconstrainedMinimizer`` instance.
     labels
-        Legend labels matching each history list.
+        Labels for legend entries.
     ax
-        Existing axes to draw on; if omitted a new figure/axes is created.
+        Existing matplotlib Axes to draw on. If *None*, a new figure is made.
     ylog
-        If True, use a log scale for the y-axis (helps compare rates).
+        If *True*, use a logarithmic y‑axis.
     title
-        Figure title.
+        Title for the plot.
     """
     if ax is None:
-        fig, ax = plt.subplots(figsize=(6, 4), constrained_layout=True)
+        _, ax = plt.subplots(figsize=(6, 4))
 
     if labels is None:
-        labels = [f"Run {i}" for i in range(len(histories))]
+        labels = [None] * len(histories)
 
-    for fvals, label in zip(histories, labels):
-        ax.plot(range(len(fvals)), fvals, marker="o", markersize=3,
-                linewidth=1.5, label=label)
+    for i, hist in enumerate(histories):
+        iters = [entry.k for entry in hist]
+        values = [entry.f for entry in hist]
+        plot_fn = ax.semilogy if ylog else ax.plot
+        plot_fn(iters, values, label=labels[i] if i < len(labels) else None)
 
-    ax.set_xlabel("Iteration $k$")
-    ax.set_ylabel(r"$f(x_k)$")
-    if ylog:
-        ax.set_yscale("log")
-
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("Objective value")
     ax.set_title(title)
-    ax.legend(loc="best")
-    ax.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
+    ax.grid(True, which="both", linestyle="--", linewidth=0.5)
+    if labels is not None and any(lbl is not None for lbl in labels):
+        ax.legend()
 
     return ax
+
+
+__all__ = ["plot_contours", "plot_convergence"]

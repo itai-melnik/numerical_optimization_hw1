@@ -23,7 +23,7 @@ def make_quadratic(Q: np.ndarray) -> Callable[[np.ndarray, bool], tuple[float, n
     hess_const = 2.0 * Q #constant hessian since it is quadratic 
     
     
-    def _quad(x: np.ndarray, need_hessian: bool = False):
+    def _quad(x: np.ndarray, bool_flag: bool = False):
         """Quadratic form value, gradient and (optionally) Hessian.
         """
         
@@ -34,7 +34,7 @@ def make_quadratic(Q: np.ndarray) -> Callable[[np.ndarray, bool], tuple[float, n
         grad = 2.0 * Q @ x
         
          # Return Hessian only when explicitly requested
-        hessian = hess_const if need_hessian else None
+        hessian = hess_const if bool_flag else None
         
         return val, grad, hessian
         
@@ -42,19 +42,19 @@ def make_quadratic(Q: np.ndarray) -> Callable[[np.ndarray, bool], tuple[float, n
         
     return _quad
 
+Qi = np.diag([1,1])
 
-def Qi():
-    Qi = np.diag([1,1])
-    return make_quadratic(Qi)
+quad_i = make_quadratic(Qi)
 
-def Qii():
-    Qii = np.diag([1,100])
-    return make_quadratic(Qii)
 
-def Qiii():
-    q = np.array([[np.sqrt(3)/2, -0.5], [0.5, np.sqrt(3)/2]])
-    Qiii = q.T  @ Qii @ q
-    return make_quadratic(Qiii)
+
+
+Qii = np.diag([1,100])
+quad_ii = make_quadratic(Qii)
+
+q = np.array([[np.sqrt(3)/2, -0.5], [0.5, np.sqrt(3)/2]])
+Qiii = q.T  @ Qii @ q
+quad_iii = make_quadratic(Qiii)
 
 
 
@@ -83,15 +83,17 @@ def rosenbrock(x: np.ndarray, bool_flag: bool = False) -> Callable[[np.ndarray, 
     return val, grad, hessian
 
 
-def linear_func(x: np.ndarray, a: np.ndarray, bool_flag: bool = False) -> Callable[[np.ndarray, bool], tuple[float, np.ndarray, Optional[np.ndarray]]]:
+def linear_func(x: np.ndarray, bool_flag: bool = False, a: np.ndarray = None ) -> Callable[[np.ndarray, bool], tuple[float, np.ndarray, Optional[np.ndarray]]]:
     
     #check if same shape
+    if a is None:
+        a = np.ones_like(x)
     
-    val = a.T @ x
+    val = float(a.T @ x)
     
-    grad = a
+    grad = a.copy()
     
-    hessian = 0 #check this needs to zero hessian
+    hessian = np.zeros((x.size, x.size)) if bool_flag else None
     
     return val, grad, hessian
 
@@ -99,8 +101,31 @@ def linear_func(x: np.ndarray, a: np.ndarray, bool_flag: bool = False) -> Callab
 
 
 def triangle_func(x: np.ndarray, bool_flag: bool = False) -> Callable[[np.ndarray, bool], tuple[float, np.ndarray, Optional[np.ndarray]]]: 
-    pass
     
+    x1, x2 = x
+    
+    # Pre‑compute the three exponentials
+    a = np.exp(x1 + 3.0 * x2 - 0.1)
+    b = np.exp(x1 - 3.0 * x2 - 0.1)
+    c = np.exp(-x1 - 0.1)
+    
+    val = float(a + b + c)
+    
+    grad = np.array([
+        a + b - c,         # ∂f/∂x₁
+        3.0 * a - 3.0 * b  # ∂f/∂x₂
+    ])
+    
+    
+    hessian = None
+    if bool_flag:
+        hxx = a + b + c              # ∂²f/∂x₁²
+        hxy = 3.0 * a - 3.0 * b      # ∂²f/∂x₁∂x₂ (symmetric)
+        hyy = 9.0 * a + 9.0 * b      # ∂²f/∂x₂²
+        hessian = np.array([[hxx, hxy], [hxy, hyy]])
+        
+    return val, grad, hessian
+
     
     
     
