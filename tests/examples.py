@@ -63,23 +63,24 @@ quad_iii = make_quadratic(Qiii)
   
 def rosenbrock(x: np.ndarray, bool_flag: bool = False) -> Callable[[np.ndarray, bool], tuple[float, np.ndarray, Optional[np.ndarray]]]: 
     
-    val = 100 * ((x[1]- x[0] ** 2) ** 2) + (1 - x[0])**0
-    
-    
-    grad0 = -400 * (x[1] - x[0] ** 2) * (x[0]) -2 * (1- x[0])
-    grad1 = 200 * (x[1] - x[0] ** 2)
-    grad = np.array([grad0, grad1])
-    
-    #d^2x0
-    h0 = 1200 * x[0] - 400 * x[1] + 2 
-    
-    #d^2x1
-    h1 = 200  
-    
-    #dx0dx1                 
-    h2 = -400 * x[0] 
-    hessian = np.array([[h0, h2], [h2, h1]]) if bool_flag else None
-    
+    # value
+    val = 100.0 * (x[1] - x[0]**2)**2 + (1.0 - x[0])**2
+
+    # gradient
+    grad = np.array([
+        -400.0 * x[0] * (x[1] - x[0]**2) - 2.0 * (1.0 - x[0]),
+        200.0  * (x[1] - x[0]**2)
+    ])
+
+    # Hessian
+    if bool_flag:
+        hxx = 1200.0 * x[0]**2 - 400.0 * x[1] + 2.0
+        hxy = -400.0 * x[0]
+        hessian = np.array([[hxx, hxy],
+                            [hxy, 200.0]])
+    else:
+        hessian = None
+
     return val, grad, hessian
 
 

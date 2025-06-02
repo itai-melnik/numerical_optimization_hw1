@@ -96,7 +96,7 @@ class TestUnconstrainedMin(unittest.TestCase):
         self._run_case(
             rosenbrock,
             x0=self.x0_r,
-            xlim=(-2, 0), ylim=(0, 3),
+            xlim=(-2,2 ), ylim=(-1, 2.5),
             title="Rosenbrock GD vs Newton path",
             max_iter=self.max_iter_r,
         )
